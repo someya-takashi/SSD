@@ -106,11 +106,14 @@ class DataTransform(object):
     def __call__(self, img, phase, boxes, labels):
         return self.transform[phase](img, boxes, labels)
 
+
+# Datasetクラス
+
 import torch
 import torch.utils.data as data
 import cv2
 
-class PreProcessedVOC2012(data.Dataset):
+class PreProcessVOC2012(data.Dataset):
     def __init__(self, img_list, anno_list, phase, transform, get_bbox_label):
         self.img_list = img_list
         self.anno_list = anno_list
@@ -136,7 +139,24 @@ class PreProcessedVOC2012(data.Dataset):
         img, boxes, labels = self.transform(img, self.phase, bbox_label[:, :4], bbox_label[:, 4])
 
         img = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
-        boxlbl = np.stack((boxes, np.expand_dims(labels, axis=1)))
+        boxlbl = np.hstack((boxes, np.expand_dims(labels, axis=1)))
 
         return img, boxlbl, height, width
-        
+
+# ミニバッチを作る関数
+
+def multiobject_collate_fn(batch):
+    imgs = []
+    targets = []
+
+    for sample in batch:
+        imgs.append(sample[0])
+        targets.append(torch.FloatTensor(sample[1]))
+
+    imgs = torch.stack(imgs, dim=0)
+
+    return imgs, targets
+
+
+
+
